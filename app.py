@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, redirect, flash
+from flask import Flask, render_template, request, redirect
 import pyrebase
 from datetime import datetime
+import io
 
 config = {
 	"apiKey": "AIzaSyAvAKENls6EQQz4aONGgkuX0piuKSKg1Gc",
@@ -16,18 +17,20 @@ pyrebase = pyrebase.initialize_app(config=config)
 storage = pyrebase.storage()
 
 app = Flask(__name__)
-app.secret_key = b"Super Secret Key"
 
 @app.route("/")
 def index():
 	return render_template("index.html")
 
-@app.route("/upload-file", methods=["POST", "GET"])
+@app.route("/upload-file-text", methods=["POST", "GET"])
 def upload_file():
-	if "file" not in request.files:	return redirect("/")
-	file = request.files["file"]
-	storage.child(f"/{str(datetime.now())[:10]} " + file.filename).put(file)
-	return redirect(f"https://firebasestorage.googleapis.com/v0/b/file-sharing-7dcf2.appspot.com/o/{str(datetime.now())[:10] + ' ' + file.filename}?alt=media")
+	try:
+		f = io.StringIO(request.form["contents"])
+		storage.child(f"/{str(datetime.now())[:10]}_" + request.form["name"] + ".txt").put(f)
+		return redirect(f"https://firebasestorage.googleapis.com/v0/b/file-sharing-7dcf2.appspot.com/o/{str(datetime.now())[:10] + '_' + request.form['name']}.txt?alt=media")
+	except Exception as e:
+		print(e)
+		return redirect("/")
 
 @app.route("/<name>")
 def view_file(name):
